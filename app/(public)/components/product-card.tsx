@@ -14,14 +14,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-
-// (Vamos precisar da Server Action na Fase 7)
-// import { giftProduct } from "@/actions/gift"; 
 import { useTransition } from "react";
 import { toast } from "sonner";
+import { giftProduct } from "@/actions/gift";
 
-// Usamos 'Pick' para selecionar apenas os campos
-// que este componente precisa do model Product
 type ProductCardProps = {
   product: Pick<
     Product,
@@ -35,7 +31,6 @@ type ProductCardProps = {
 };
 
 export function ProductCard({ product }: ProductCardProps) {
-  // useTransition é para feedback de loading na Server Action
   const [isPending, startTransition] = useTransition();
 
   const isSoldOut =
@@ -47,13 +42,10 @@ export function ProductCard({ product }: ProductCardProps) {
   const handleGift = async () => {
     startTransition(async () => {
       toast.info("Processando seu presente...");
-      
-      // (Isso será implementado na Fase 7)
-      // const result = await giftProduct(product.id);
-      
-      // Simulação por enquanto:
-      const result = { success: false, message: "Função ainda não implementada." };
-      
+
+      // (MUDANÇA): Chamar a Server Action real
+      const result = await giftProduct(product.id);
+
       if (result.success) {
         toast.success(result.message);
       } else {
@@ -65,10 +57,8 @@ export function ProductCard({ product }: ProductCardProps) {
   return (
     <Card className="flex flex-col">
       <CardHeader>
-        {/* Imagem do Produto */}
         <div className="relative h-48 w-full overflow-hidden rounded-md">
           <Image
-            // Usamos nossa API para buscar a imagem pela key
             src={`/api/images/${product.imageUrl}`}
             alt={product.name}
             fill
@@ -86,7 +76,6 @@ export function ProductCard({ product }: ProductCardProps) {
         </div>
       </CardHeader>
       <CardContent className="flex-1 space-y-3">
-        {/* Nome e Descrição */}
         <CardTitle>{product.name}</CardTitle>
         <CardDescription>
           {product.description ||
@@ -94,7 +83,6 @@ export function ProductCard({ product }: ProductCardProps) {
         </CardDescription>
       </CardContent>
       <CardFooter className="flex flex-col items-start gap-4">
-        {/* Progresso */}
         <div className="w-full space-y-1">
           <p className="text-sm font-medium text-muted-foreground">
             Recebido: {product.currentQuantity} de{" "}
@@ -103,13 +91,16 @@ export function ProductCard({ product }: ProductCardProps) {
           <Progress value={progressPercentage} />
         </div>
 
-        {/* Botão de Ação */}
         <Button
           onClick={handleGift}
           disabled={isSoldOut || isPending}
           className="w-full"
         >
-          {isSoldOut ? "Presente Esgotado" : (isPending ? "Processando..." : "Presentear com 1 unidade")}
+          {isSoldOut
+            ? "Presente Esgotado"
+            : isPending
+            ? "Processando..."
+            : "Presentear com 1 unidade"}
         </Button>
       </CardFooter>
     </Card>
