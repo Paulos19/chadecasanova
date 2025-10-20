@@ -5,7 +5,7 @@ import { useSession } from "next-auth/react";
 import { Role } from "@prisma/client";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { UserNav } from "@/components/ser-nav";
+import { UserNav } from "@/components/user-nav";
 
 export function PublicHeader() {
   const { data: session } = useSession();

@@ -1,5 +1,5 @@
 // app/(admin)/components/admin-header.tsx
-import { UserNav } from "@/components/ser-nav";
+import { UserNav } from "@/components/user-nav";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 

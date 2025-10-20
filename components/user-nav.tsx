@@ -1,13 +1,18 @@
 // components/user-nav.tsx
 "use client";
 
+import Link from "next/link"; // 1. Importar o Link
 import { useSession, signOut } from "next-auth/react";
+import { Role } from "@prisma/client"; // 2. Importar o Enum Role
+import { LayoutDashboard, LogOut } from "lucide-react"; // 3. Importar ícones
+
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
+  DropdownMenuGroup, // 4. Usar Group para organizar
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
@@ -17,12 +22,11 @@ export function UserNav() {
   const { data: session } = useSession();
 
   if (!session?.user) {
-    // Não deve acontecer em páginas protegidas, mas é uma boa prática
     return null;
   }
 
   const user = session.user;
-  // Pega a primeira letra do email para o Avatar
+  const isAdmin = user.role === Role.ADMIN;
   const fallback = user.email ? user.email[0].toUpperCase() : "U";
 
   return (
@@ -44,10 +48,25 @@ export function UserNav() {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        {/* Item de Logout */}
-        <DropdownMenuItem onClick={() => signOut()}>
-          Sair
-        </DropdownMenuItem>
+
+        {/* 5. Criar um grupo de navegação */}
+        <DropdownMenuGroup>
+          {/* 6. Renderização condicional para o Admin */}
+          {isAdmin && (
+            <DropdownMenuItem asChild>
+              <Link href="/dashboard">
+                <LayoutDashboard className="mr-2 h-4 w-4" />
+                <span>Dashboard</span>
+              </Link>
+            </DropdownMenuItem>
+          )}
+
+          {/* Item de Logout */}
+          <DropdownMenuItem onClick={() => signOut()}>
+            <LogOut className="mr-2 h-4 w-4" />
+            <span>Sair</span>
+          </DropdownMenuItem>
+        </DropdownMenuGroup>
       </DropdownMenuContent>
     </DropdownMenu>
   );
