@@ -2,7 +2,7 @@
 "use client";
 
 import { ChangeEvent, useState, useTransition } from "react";
-import { useForm } from "react-hook-form";
+import { Resolver, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { productSchema } from "@/lib/schemas";
@@ -39,7 +39,7 @@ export function ProductForm() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const form = useForm<z.infer<typeof productSchema>>({
-    resolver: zodResolver(productSchema),
+    resolver: zodResolver(productSchema) as Resolver<z.infer<typeof productSchema>>,
     defaultValues: {
       name: "",
       description: "",
