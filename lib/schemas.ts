@@ -6,10 +6,13 @@ export const productSchema = z.object({
     .string()
     .min(3, { message: "Nome deve ter pelo menos 3 caracteres." }),
   description: z.string().optional(),
+  
+  // MUDANÇA: 'imageUrl' agora é a 'key' do blob, não uma URL
   imageUrl: z
     .string()
-    .url({ message: "URL da imagem é obrigatória." }),
-  desiredQuantity: z.coerce // 'coerce' converte o string do form para número
+    .min(1, { message: "A imagem é obrigatória." }), 
+
+  desiredQuantity: z.coerce
     .number()
     .int()
     .positive({ message: "Quantidade deve ser maior que zero." }),

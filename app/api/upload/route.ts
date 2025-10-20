@@ -1,28 +1,37 @@
 // app/api/upload/route.ts
-import { put } from "@vercel/blob";
+import { getStore } from "@netlify/blobs";
 import { NextResponse } from "next/server";
+import { v4 as uuidv4 } from "uuid"; // Para gerar chaves únicas
 
-export async function POST(request: Request): Promise<NextResponse> {
-  const { searchParams } = new URL(request.url);
-  const filename = searchParams.get("filename");
-
-  if (!filename || !request.body) {
-    return NextResponse.json(
-      { error: "Nome do arquivo não encontrado." },
-      { status: 400 }
-    );
-  }
-
+export async function POST(request: Request) {
   try {
-    // O 'request.body' é o stream do arquivo
-    const blob = await put(filename, request.body, {
-      access: "public",
-    });
+    // 1. Parse o FormData
+    const formData = await request.formData();
+    const file = formData.get("file") as File;
 
-    // Retorna a URL pública do blob
-    return NextResponse.json(blob);
+    if (!file) {
+      return NextResponse.json(
+        { error: "Nenhum arquivo encontrado." },
+        { status: 400 }
+      );
+    }
+
+    // 2. Gerar uma chave única
+    const fileExtension = file.name.split(".").pop();
+    const key = `${uuidv4()}.${fileExtension}`;
+
+    // 3. Obter o "store" (vamos nomeá-lo 'images')
+    const store = getStore("images");
+
+    // 4. Salvar o arquivo no blob
+    // O 'file' pode ser passado diretamente
+    await store.set(key, file);
+
+    // 5. Retornar a *CHAVE* (key) para o cliente, não uma URL
+    return NextResponse.json({ key });
+    
   } catch (error) {
-    console.error("[BLOB_POST_ERROR]", error);
+    console.error("[NETLIFY_BLOB_POST_ERROR]", error);
     return NextResponse.json(
       { error: "Erro ao fazer upload da imagem." },
       { status: 500 }

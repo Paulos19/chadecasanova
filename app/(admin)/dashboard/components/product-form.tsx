@@ -1,4 +1,4 @@
-// app/(admin)/dashboard/components/product-form.tsx
+// app/(admin)/dashboard/components/product-form.tsx (Corrigido)
 "use client";
 
 import { ChangeEvent, useState, useTransition } from "react";
@@ -36,18 +36,19 @@ export function ProductForm() {
   const [open, setOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const form = useForm<z.infer<typeof productSchema>>({
     resolver: zodResolver(productSchema),
     defaultValues: {
       name: "",
       description: "",
-      imageUrl: "",
+      imageUrl: "", // (Isso agora será a 'key')
       desiredQuantity: 1,
     },
   });
 
-  const imageUrl = form.watch("imageUrl");
+  const imageKey = form.watch("imageUrl");
 
   // Função para lidar com o Upload da Imagem
   async function handleImageUpload(
@@ -63,23 +64,32 @@ export function ProductForm() {
     setIsUploading(true);
     toast.loading("Enviando imagem...");
 
+    // --- CORREÇÃO ESTÁ AQUI ---
+    // 1. Criar FormData e anexar o arquivo
+    const formData = new FormData();
+    formData.append("file", file); // A chave "file" deve bater com a API
+
+    // Gerar preview local
+    if (previewUrl) URL.revokeObjectURL(previewUrl); // Limpar preview antigo
+    setPreviewUrl(URL.createObjectURL(file));
+
     try {
-      const response = await fetch(
-        `/api/upload?filename=${file.name}`,
-        {
-          method: "POST",
-          body: file,
-        }
-      );
+      // 2. Enviar o FormData no body.
+      // O browser definirá o Content-Type como 'multipart/form-data'
+      // 3. Remover o "?filename=" da URL.
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+      // --- FIM DA CORREÇÃO ---
 
       if (!response.ok) {
         throw new Error("Falha no upload");
       }
 
-      const newBlob = (await response.json()) as { url: string };
+      const newBlob = (await response.json()) as { key: string };
 
-      // Seta a URL retornada no campo 'imageUrl' do formulário
-      form.setValue("imageUrl", newBlob.url, {
+      form.setValue("imageUrl", newBlob.key, {
         shouldValidate: true,
       });
       toast.dismiss();
@@ -87,6 +97,7 @@ export function ProductForm() {
     } catch (error) {
       toast.dismiss();
       toast.error("Erro ao enviar imagem.");
+      setPreviewUrl(null);
     } finally {
       setIsUploading(false);
     }
@@ -102,6 +113,7 @@ export function ProductForm() {
       if (result.success) {
         toast.success(result.message);
         form.reset();
+        setPreviewUrl(null);
         setOpen(false);
       } else {
         toast.error(result.message);
@@ -110,7 +122,17 @@ export function ProductForm() {
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(isOpen) => {
+        setOpen(isOpen);
+        if (!isOpen) {
+          form.reset();
+          if (previewUrl) URL.revokeObjectURL(previewUrl);
+          setPreviewUrl(null);
+        }
+      }}
+    >
       <DialogTrigger asChild>
         <Button>Adicionar Novo Produto</Button>
       </DialogTrigger>
@@ -185,16 +207,20 @@ export function ProductForm() {
                   <FormControl>
                     <Input
                       type="file"
+                      accept="image/*"
                       onChange={handleImageUpload}
                       disabled={isUploading}
                     />
                   </FormControl>
                   <FormDescription>
                     {isUploading && "Enviando..."}
-                    {imageUrl && (
+                    {(previewUrl || imageKey) && (
                       <div className="mt-2 rounded-md border p-2">
                         <Image
-                          src={imageUrl}
+                          src={
+                            previewUrl || // Prioriza o preview local
+                            `/api/images/${imageKey}` // Fallback para a API
+                          }
                           alt="Preview"
                           width={100}
                           height={100}
