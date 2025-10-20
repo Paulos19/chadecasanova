@@ -1,10 +1,10 @@
 // components/user-nav.tsx
 "use client";
 
-import Link from "next/link"; // 1. Importar o Link
+import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
-import { Role } from "@prisma/client"; // 2. Importar o Enum Role
-import { LayoutDashboard, LogOut } from "lucide-react"; // 3. Importar ícones
+import { Role } from "@prisma/client";
+import { LayoutDashboard, LogOut } from "lucide-react";
 
 import {
   DropdownMenu,
@@ -12,10 +12,10 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuGroup, // 4. Usar Group para organizar
+  DropdownMenuGroup,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
+// O <Button> não é mais necessário para o trigger
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 export function UserNav() {
@@ -32,11 +32,14 @@ export function UserNav() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-          <Avatar className="h-8 w-8">
+        {/* --- MUDANÇA AQUI --- */}
+        {/* Trocamos <Button> por <button> para transparência total */}
+        <button className="relative h-9 w-9 rounded-full transition-opacity hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-opacity-75">
+          <Avatar className="h-9 w-9">
             <AvatarFallback>{fallback}</AvatarFallback>
           </Avatar>
-        </Button>
+        </button>
+        {/* --- FIM DA MUDANÇA --- */}
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
@@ -49,9 +52,7 @@ export function UserNav() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
 
-        {/* 5. Criar um grupo de navegação */}
         <DropdownMenuGroup>
-          {/* 6. Renderização condicional para o Admin */}
           {isAdmin && (
             <DropdownMenuItem asChild>
               <Link href="/dashboard">
@@ -60,8 +61,6 @@ export function UserNav() {
               </Link>
             </DropdownMenuItem>
           )}
-
-          {/* Item de Logout */}
           <DropdownMenuItem onClick={() => signOut()}>
             <LogOut className="mr-2 h-4 w-4" />
             <span>Sair</span>

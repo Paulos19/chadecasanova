@@ -10,16 +10,17 @@ import { authOptions } from "@/lib/auth";
 import { Role } from "@prisma/client";
 import { getNetlifyStore } from "@/lib/blob-store";
 
-// Definimos o tipo de retorno para dar feedback ao formulário
+// O tipo de retorno continua o mesmo
 type FormState = {
   success: boolean;
   message: string;
 };
 
+// --- FUNÇÃO DE CRIAÇÃO (Sem alterações) ---
 export async function createProduct(
   values: z.infer<typeof productSchema>
 ): Promise<FormState> {
-  // 1. Validar os dados no servidor (segurança)
+  // 1. Validar os dados no servidor
   const validatedFields = productSchema.safeParse(values);
 
   if (!validatedFields.success) {
@@ -40,12 +41,10 @@ export async function createProduct(
         description,
         imageUrl,
         desiredQuantity,
-        // currentQuantity é 0 por padrão (definido no schema.prisma)
       },
     });
 
     // 3. Revalidar o cache
-    // Limpa o cache da homepage e do dashboard para que vejam o novo produto
     revalidatePath("/");
     revalidatePath("/dashboard");
 
@@ -62,8 +61,10 @@ export async function createProduct(
   }
 }
 
-export async function deleteProduct(
-  productId: string
+// --- FUNÇÃO DE ATUALIZAÇÃO (NOVA) ---
+export async function updateProduct(
+  productId: string,
+  values: z.infer<typeof productSchema>
 ): Promise<FormState> {
   // 1. Verificar se é o Admin
   const session = await getServerSession(authOptions);
@@ -74,8 +75,84 @@ export async function deleteProduct(
     };
   }
 
+  // 2. Validar os dados
+  const validatedFields = productSchema.safeParse(values);
+  if (!validatedFields.success) {
+    return {
+      success: false,
+      message: "Erro de validação. Verifique os campos.",
+    };
+  }
+
+  const { name, description, imageUrl, desiredQuantity } =
+    validatedFields.data;
+
   try {
-    // 2. Buscar o produto para pegar a key da imagem
+    // 3. Buscar o produto antigo para pegar a key da imagem
+    const oldProduct = await prisma.product.findUnique({
+      where: { id: productId },
+      select: { imageUrl: true },
+    });
+
+    if (!oldProduct) {
+      throw new Error("Produto não encontrado.");
+    }
+
+    // 4. Atualizar o produto no banco
+    await prisma.product.update({
+      where: { id: productId },
+      data: {
+        name,
+        description,
+        imageUrl, // imageUrl é a nova key (ou a antiga se não mudou)
+        desiredQuantity,
+      },
+    });
+
+    // 5. Limpeza do Blob: Se a imagem mudou, delete a antiga
+    if (oldProduct.imageUrl !== imageUrl) {
+      try {
+        const store = getNetlifyStore("images");
+        await store.delete(oldProduct.imageUrl);
+      } catch (blobError) {
+        console.warn(
+          `[BLOB_DELETE_WARN] Falha ao deletar imagem antiga: ${oldProduct.imageUrl}`,
+          blobError
+        );
+      }
+    }
+
+    // 6. Revalidar o cache
+    revalidatePath("/");
+    revalidatePath("/dashboard");
+
+    return {
+      success: true,
+      message: "Produto atualizado com sucesso!",
+    };
+  } catch (error) {
+    console.error("[PRODUCT_UPDATE_ACTION_ERROR]", error);
+    return {
+      success: false,
+      message: "Erro no servidor. Não foi possível atualizar o produto.",
+    };
+  }
+}
+
+// --- FUNÇÃO DE EXCLUSÃO (Sem alterações) ---
+export async function deleteProduct(
+  productId: string
+): Promise<FormState> {
+  // ... (código existente da função deleteProduct)
+  const session = await getServerSession(authOptions);
+  if (session?.user?.role !== Role.ADMIN) {
+    return {
+      success: false,
+      message: "Acesso negado.",
+    };
+  }
+
+  try {
     const product = await prisma.product.findUnique({
       where: { id: productId },
       select: { imageUrl: true },
@@ -85,28 +162,22 @@ export async function deleteProduct(
       throw new Error("Produto não encontrado.");
     }
 
-    // 3. Deletar o produto do banco de dados
-    // (O Prisma 'onDelete: Cascade' cuidará dos 'Gifts' associados)
     await prisma.product.delete({
       where: { id: productId },
     });
 
-    // 4. Deletar a imagem do Netlify Blob
     try {
       const store = getNetlifyStore("images");
       await store.delete(product.imageUrl);
     } catch (blobError) {
-      // Logar o erro, mas não parar a execução
-      // O produto já foi deletado do DB, que é o mais importante.
       console.warn(
         `[BLOB_DELETE_WARN] Falha ao deletar imagem do blob: ${product.imageUrl}`,
         blobError
       );
     }
 
-    // 5. Revalidar o cache
     revalidatePath("/dashboard");
-    revalidatePath("/"); // Homepage (para o item sumir de lá)
+    revalidatePath("/");
 
     return {
       success: true,

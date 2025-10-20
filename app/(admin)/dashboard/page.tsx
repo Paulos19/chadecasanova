@@ -2,8 +2,8 @@
 import prisma from "@/lib/prisma";
 import { ProductForm } from "./components/product-form";
 import { ProductList } from "./components/product-list";
+import { Button } from "@/components/ui/button"; // Importar Button
 
-// Função para buscar os dados no servidor
 async function getProducts() {
   try {
     const products = await prisma.product.findMany({
@@ -21,15 +21,21 @@ async function getProducts() {
 export default async function DashboardPage() {
   const products = await getProducts();
 
-  // O container e o padding agora estão no layout,
-  // então só precisamos do 'space-y-6'
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">
           Meus Produtos
         </h1>
-        <ProductForm />
+        {/* --- MUDANÇA AQUI ---
+          Passamos o botão "Adicionar" como a 'trigger'
+          para o ProductForm em modo de 'criação'.
+        */}
+        <ProductForm
+          trigger={
+            <Button>Adicionar Novo Produto</Button>
+          }
+        />
       </div>
 
       <ProductList products={products} />

@@ -1,14 +1,15 @@
-// app/(admin)/dashboard/components/product-form.tsx (Corrigido)
+// app/(admin)/dashboard/components/product-form.tsx
 "use client";
 
 import { ChangeEvent, useState, useTransition } from "react";
-import { Resolver, useForm } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { productSchema } from "@/lib/schemas";
-import { createProduct } from "@/actions/product";
+import { createProduct, updateProduct } from "@/actions/product"; // Importar updateProduct
 import { toast } from "sonner";
 import Image from "next/image";
+import { Product } from "@prisma/client"; // Importar o tipo Product
 
 import { Button } from "@/components/ui/button";
 import {
@@ -32,25 +33,56 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
-export function ProductForm() {
+// --- NOVAS PROPS ---
+type ProductFormProps = {
+  productToEdit?: Product; // O produto para editar (opcional)
+  trigger: React.ReactNode; // O botão que abre o modal (obrigatório)
+};
+
+export function ProductForm({
+  productToEdit,
+  trigger,
+}: ProductFormProps) {
   const [open, setOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
+  // --- LÓGICA DE EDIÇÃO ---
+  const isEditMode = !!productToEdit;
+
   const form = useForm<z.infer<typeof productSchema>>({
-    resolver: zodResolver(productSchema) as Resolver<z.infer<typeof productSchema>>,
-    defaultValues: {
-      name: "",
-      description: "",
-      imageUrl: "", // (Isso agora será a 'key')
-      desiredQuantity: 1,
-    },
+    resolver: zodResolver(productSchema),
+    // Define os valores padrão (se for edição, usa o produto, senão, vazio)
+    defaultValues: isEditMode
+      ? {
+          name: productToEdit.name,
+          description: productToEdit.description || "",
+          imageUrl: productToEdit.imageUrl,
+          desiredQuantity: productToEdit.desiredQuantity,
+        }
+      : {
+          name: "",
+          description: "",
+          imageUrl: "",
+          desiredQuantity: 1,
+        },
   });
 
-  const imageKey = form.watch("imageUrl");
+  // Função para pré-preencher a imagem ao abrir o modal de edição
+  const handleOpenChange = (isOpen: boolean) => {
+    setOpen(isOpen);
+    if (!isOpen) {
+      // Resetar ao fechar
+      form.reset(isEditMode ? productToEdit : { name: "", description: "", imageUrl: "", desiredQuantity: 1 });
+      setPreviewUrl(null);
+    } else if (isEditMode) {
+      // Definir o preview da imagem existente ao abrir
+      setPreviewUrl(`/api/images/${productToEdit.imageUrl}`);
+    }
+  };
 
-  // Função para lidar com o Upload da Imagem
+  // Upload de imagem (sem alterações, esta lógica funciona)
   async function handleImageUpload(
     event: ChangeEvent<HTMLInputElement>
   ) {
@@ -63,25 +95,18 @@ export function ProductForm() {
 
     setIsUploading(true);
     toast.loading("Enviando imagem...");
-
-    // --- CORREÇÃO ESTÁ AQUI ---
-    // 1. Criar FormData e anexar o arquivo
-    const formData = new FormData();
-    formData.append("file", file); // A chave "file" deve bater com a API
-
-    // Gerar preview local
+    
     if (previewUrl) URL.revokeObjectURL(previewUrl); // Limpar preview antigo
-    setPreviewUrl(URL.createObjectURL(file));
+    setPreviewUrl(URL.createObjectURL(file)); // Preview local
+
+    const formData = new FormData();
+    formData.append("file", file);
 
     try {
-      // 2. Enviar o FormData no body.
-      // O browser definirá o Content-Type como 'multipart/form-data'
-      // 3. Remover o "?filename=" da URL.
       const response = await fetch("/api/upload", {
         method: "POST",
         body: formData,
       });
-      // --- FIM DA CORREÇÃO ---
 
       if (!response.ok) {
         throw new Error("Falha no upload");
@@ -97,24 +122,34 @@ export function ProductForm() {
     } catch (error) {
       toast.dismiss();
       toast.error("Erro ao enviar imagem.");
-      setPreviewUrl(null);
+      // Se falhar, reverte para a imagem original (se houver)
+      setPreviewUrl(
+        isEditMode ? `/api/images/${productToEdit.imageUrl}` : null
+      );
     } finally {
       setIsUploading(false);
     }
   }
 
-  // Função para lidar com o Submit do Formulário
+  // Função de Submit (agora condicional)
   async function onSubmit(
     values: z.infer<typeof productSchema>
   ) {
     startTransition(async () => {
-      const result = await createProduct(values);
+      let result: FormState;
 
+      if (isEditMode) {
+        // --- MODO DE EDIÇÃO ---
+        result = await updateProduct(productToEdit.id, values);
+      } else {
+        // --- MODO DE CRIAÇÃO ---
+        result = await createProduct(values);
+      }
+
+      // Feedback
       if (result.success) {
         toast.success(result.message);
-        form.reset();
-        setPreviewUrl(null);
-        setOpen(false);
+        handleOpenChange(false); // Fecha e reseta o modal
       } else {
         toast.error(result.message);
       }
@@ -122,25 +157,18 @@ export function ProductForm() {
   }
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(isOpen) => {
-        setOpen(isOpen);
-        if (!isOpen) {
-          form.reset();
-          if (previewUrl) URL.revokeObjectURL(previewUrl);
-          setPreviewUrl(null);
-        }
-      }}
-    >
-      <DialogTrigger asChild>
-        <Button>Adicionar Novo Produto</Button>
-      </DialogTrigger>
+    // O Dialog agora usa o 'onOpenChange' customizado
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Novo Produto</DialogTitle>
+          <DialogTitle>
+            {isEditMode ? "Editar Produto" : "Novo Produto"}
+          </DialogTitle>
           <DialogDescription>
-            Adicione um item à sua lista de desejos.
+            {isEditMode
+              ? "Faça alterações no item da sua lista."
+              : "Adicione um item à sua lista de desejos."}
           </DialogDescription>
         </DialogHeader>
 
@@ -149,7 +177,7 @@ export function ProductForm() {
             onSubmit={form.handleSubmit(onSubmit)}
             className="space-y-4"
           >
-            {/* Campo Nome */}
+            {/* ... (Campos Nome, Descrição, Quantidade - sem mudanças) ... */}
             <FormField
               control={form.control}
               name="name"
@@ -163,8 +191,6 @@ export function ProductForm() {
                 </FormItem>
               )}
             />
-
-            {/* Campo Descrição */}
             <FormField
               control={form.control}
               name="description"
@@ -181,8 +207,6 @@ export function ProductForm() {
                 </FormItem>
               )}
             />
-
-            {/* Campo Quantidade */}
             <FormField
               control={form.control}
               name="desiredQuantity"
@@ -197,7 +221,7 @@ export function ProductForm() {
               )}
             />
 
-            {/* Campo Imagem */}
+            {/* Campo Imagem (Lógica de preview atualizada) */}
             <FormField
               control={form.control}
               name="imageUrl"
@@ -214,13 +238,14 @@ export function ProductForm() {
                   </FormControl>
                   <FormDescription>
                     {isUploading && "Enviando..."}
-                    {(previewUrl || imageKey) && (
+                    {/* Se tiver previewUrl, use-o.
+                        (Ele será setado com a img local no upload,
+                         ou com a img do BD ao abrir o modal)
+                    */}
+                    {previewUrl && (
                       <div className="mt-2 rounded-md border p-2">
                         <Image
-                          src={
-                            previewUrl || // Prioriza o preview local
-                            `/api/images/${imageKey}` // Fallback para a API
-                          }
+                          src={previewUrl}
                           alt="Preview"
                           width={100}
                           height={100}
@@ -239,7 +264,11 @@ export function ProductForm() {
                 type="submit"
                 disabled={isPending || isUploading}
               >
-                {isPending ? "Salvando..." : "Salvar Produto"}
+                {isPending
+                  ? "Salvando..."
+                  : isEditMode
+                  ? "Salvar Alterações"
+                  : "Salvar Produto"}
               </Button>
             </DialogFooter>
           </form>

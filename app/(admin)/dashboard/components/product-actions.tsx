@@ -5,6 +5,8 @@ import { useState, useTransition } from "react";
 import { MoreHorizontal } from "lucide-react";
 import { toast } from "sonner";
 import { deleteProduct } from "@/actions/product";
+import { Product } from "@prisma/client"; // 1. Importar o tipo Product
+import { ProductForm } from "./product-form"; // 2. Importar o formulário
 
 import {
   AlertDialog,
@@ -26,27 +28,23 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 
+// 3. Receber o objeto 'product' completo
 type ProductActionsProps = {
-  productId: string;
-  productName: string;
+  product: Product;
 };
 
-export function ProductActions({
-  productId,
-  productName,
-}: ProductActionsProps) {
+export function ProductActions({ product }: ProductActionsProps) {
   const [isPending, startTransition] = useTransition();
-  // Estado para controlar o modal de exclusão (evita fechar)
   const [isAlertOpen, setIsAlertOpen] = useState(false);
 
   const onDelete = () => {
     startTransition(async () => {
       toast.loading("Excluindo produto...");
-      const result = await deleteProduct(productId);
+      const result = await deleteProduct(product.id); // Usar product.id
 
       if (result.success) {
         toast.success(result.message);
-        setIsAlertOpen(false); // Fecha o modal
+        setIsAlertOpen(false);
       } else {
         toast.error(result.message);
       }
@@ -54,7 +52,6 @@ export function ProductActions({
   };
 
   return (
-    // O AlertDialog controla o modal de confirmação
     <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -65,14 +62,24 @@ export function ProductActions({
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuLabel>Ações</DropdownMenuLabel>
-          <DropdownMenuItem onClick={() => toast.info("Edição em breve!")}>
-            Editar
-          </DropdownMenuItem>
-          {/* O AlertDialogTrigger abre o modal de confirmação */}
+
+          {/* 4. O <ProductForm> agora envolve o item "Editar" */}
+          <ProductForm
+            productToEdit={product}
+            trigger={
+              <DropdownMenuItem
+                onSelect={(e) => e.preventDefault()} // Impede o dropdown de fechar ao clicar
+              >
+                Editar
+              </DropdownMenuItem>
+            }
+          />
+
+          {/* O "Excluir" continua o mesmo */}
           <AlertDialogTrigger asChild>
             <DropdownMenuItem
               className="text-red-600"
-              onSelect={(e) => e.preventDefault()} // Impede o dropdown de fechar
+              onSelect={(e) => e.preventDefault()}
             >
               Excluir
             </DropdownMenuItem>
@@ -80,14 +87,14 @@ export function ProductActions({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {/* Conteúdo do Modal de Confirmação */}
+      {/* Conteúdo do Modal de Confirmação (Excluir) */}
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
           <AlertDialogDescription>
             Isso excluirá permanentemente o produto:
             <strong className="block py-2">
-              {productName}
+              {product.name}
             </strong>
             Esta ação não pode ser desfeita.
           </AlertDialogDescription>

@@ -12,7 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { ProductActions } from "./product-actions"; // Nosso componente
+import { ProductActions } from "./product-actions";
 
 type ProductListProps = {
   products: Product[];
@@ -70,10 +70,9 @@ export function ProductList({ products }: ProductListProps) {
                   </div>
                 </TableCell>
                 <TableCell>
-                  <ProductActions
-                    productId={product.id}
-                    productName={product.name}
-                  />
+                  {/* --- MUDANÇA AQUI --- */}
+                  {/* Passar o objeto 'product' completo */}
+                  <ProductActions product={product} />
                 </TableCell>
               </TableRow>
             );
