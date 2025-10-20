@@ -18,22 +18,20 @@ async function getProducts() {
   }
 }
 
-// A página agora é um Server Component (async)
 export default async function DashboardPage() {
-  // 1. Buscar os produtos no servidor
   const products = await getProducts();
 
+  // O container e o padding agora estão no layout,
+  // então só precisamos do 'space-y-6'
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">
           Meus Produtos
         </h1>
-        {/* O formulário de "Adicionar" continua aqui */}
         <ProductForm />
       </div>
 
-      {/* 2. Passar os produtos para o componente de lista */}
       <ProductList products={products} />
     </div>
   );

@@ -1,6 +1,7 @@
 // app/(public)/layout.tsx
 import { ReactNode } from "react";
 import { BackgroundPattern } from "./components/background-pattern";
+import { PublicHeader } from "./components/public-header"; // 1. Importar
 
 export default function PublicLayout({
   children,
@@ -9,10 +10,9 @@ export default function PublicLayout({
 }) {
   return (
     <div className="relative flex min-h-screen flex-col">
-      {/* O Padrão de Fundo ficará fixo atrás de tudo */}
       <BackgroundPattern />
+      <PublicHeader /> {/* 2. Adicionar o header */}
 
-      {/* O 'isolate' abaixo garante que o z-index do fundo não afete o conteúdo */}
       <main className="flex-1 isolate">
         {children}
       </main>

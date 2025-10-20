@@ -1,6 +1,6 @@
 // app/(admin)/layout.tsx
 import { ReactNode } from "react";
-// (No futuro, podemos adicionar um Header ou Sidebar de Admin aqui)
+import { AdminHeader } from "./components/admin-header"; // 1. Importar
 
 export default function AdminLayout({
   children,
@@ -9,10 +9,12 @@ export default function AdminLayout({
 }) {
   return (
     <div className="flex min-h-screen flex-col">
-      {/* Ex: <AdminHeader /> */}
+      <AdminHeader /> {/* 2. Adicionar o header */}
       <main className="flex-1 p-8">
-        {/* Este 'children' serão as páginas do admin */}
-        {children}
+        {/* Container para limitar o conteúdo do dashboard */}
+        <div className="container mx-auto max-w-7xl">
+          {children}
+        </div>
       </main>
     </div>
   );
