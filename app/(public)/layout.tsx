@@ -1,8 +1,6 @@
 // app/(public)/layout.tsx
 import { ReactNode } from "react";
-
-// (Aqui podemos adicionar um Header público com botão de Logout no futuro)
-// import { PublicHeader } from "./components/public-header";
+import { BackgroundPattern } from "./components/background-pattern";
 
 export default function PublicLayout({
   children,
@@ -10,12 +8,14 @@ export default function PublicLayout({
   children: ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen flex-col">
-      {/* <PublicHeader /> */}
-      <main className="flex-1 bg-gray-50/50">
+    <div className="relative flex min-h-screen flex-col">
+      {/* O Padrão de Fundo ficará fixo atrás de tudo */}
+      <BackgroundPattern />
+
+      {/* O 'isolate' abaixo garante que o z-index do fundo não afete o conteúdo */}
+      <main className="flex-1 isolate">
         {children}
       </main>
-      {/* <PublicFooter /> */}
     </div>
   );
 }

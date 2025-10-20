@@ -1,12 +1,11 @@
 // app/(public)/page.tsx
 import prisma from "@/lib/prisma";
-import { ProductCard } from "./components/product-card";
+import { ProductGrid } from "./components/product-grid"; // Importe o novo grid
 
-// Função para buscar os dados no servidor
+// Esta função de busca (Server-Side) continua a mesma
 async function getProducts() {
   try {
     const products = await prisma.product.findMany({
-      // Selecionar apenas os campos que o Card precisa
       select: {
         id: true,
         name: true,
@@ -16,43 +15,36 @@ async function getProducts() {
         currentQuantity: true,
       },
       orderBy: {
-        createdAt: "desc", // Mais novos primeiro
+        createdAt: "desc",
       },
     });
     return products;
   } catch (error) {
     console.error("[GET_PRODUCTS_ERROR]", error);
-    return []; // Retorna array vazio em caso de erro
+    return [];
   }
 }
 
-// Este é um Server Component (por ser 'async')
+// A página continua sendo um Server Component, o que é ótimo!
 export default async function HomePage() {
   const products = await getProducts();
 
   return (
-    <div className="container mx-auto max-w-7xl p-8">
-      <header className="mb-8 text-center">
-        <h1 className="text-4xl font-bold">
+    // O 'isolate' é do layout, garantindo que o z-index funcione
+    <div className="isolate container mx-auto max-w-7xl p-8">
+      <header className="mb-12 text-center">
+        <h1 className="text-5xl font-bold text-white">
           Nosso Chá de Casa Nova
         </h1>
-        <p className="text-lg text-muted-foreground">
+        <p className="mt-2 text-xl text-gray-300">
           Escolha um item da lista para nos presentear!
         </p>
       </header>
 
-      {products.length === 0 ? (
-        <p className="text-center text-muted-foreground">
-          A lista de presentes ainda não foi adicionada pelo administrador.
-        </p>
-      ) : (
-        // Grid responsivo para os cards
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {products.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
-      )}
+      {/* Passamos os dados do servidor para o componente cliente
+        'ProductGrid', que cuidará da animação.
+      */}
+      <ProductGrid products={products} />
     </div>
   );
 }

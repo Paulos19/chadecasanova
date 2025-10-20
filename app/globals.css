@@ -28,8 +28,9 @@
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
-    --radius: 0.5rem
+    --radius: 0.5rem;
   }
+ 
   .dark {
     --background: 0 0% 3.9%;
     --foreground: 0 0% 98%;
@@ -54,7 +55,7 @@
     --chart-2: 160 60% 45%;
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%
+    --chart-5: 340 75% 55%;
   }
 }
 
@@ -62,7 +63,16 @@
   * {
     @apply border-border;
   }
+  
+  /* ATUALIZAÇÃO DO FUNDO */
   body {
     @apply bg-background text-foreground;
+    
+    /* Fundo com gradiente escuro e fallback */
+    background-color: #111827; /* cinza-azulado 900 */
+    @apply bg-gradient-to-br from-gray-900 via-gray-900 to-blue-950;
+    
+    /* Garante que o gradiente cubra a tela inteira */
+    min-height: 100vh;
   }
 }

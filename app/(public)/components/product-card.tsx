@@ -5,18 +5,12 @@ import Image from "next/image";
 import { Product } from "@prisma/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { giftProduct } from "@/actions/gift";
 import { useTransition } from "react";
 import { toast } from "sonner";
-import { giftProduct } from "@/actions/gift";
+import { motion } from "framer-motion";
+import { Gift, Check } from "lucide-react";
 
 type ProductCardProps = {
   product: Pick<
@@ -28,9 +22,14 @@ type ProductCardProps = {
     | "desiredQuantity"
     | "currentQuantity"
   >;
+  // Adicionado para a animação da grade
+  variants?: any;
 };
 
-export function ProductCard({ product }: ProductCardProps) {
+export function ProductCard({
+  product,
+  variants,
+}: ProductCardProps) {
   const [isPending, startTransition] = useTransition();
 
   const isSoldOut =
@@ -38,14 +37,10 @@ export function ProductCard({ product }: ProductCardProps) {
   const progressPercentage =
     (product.currentQuantity / product.desiredQuantity) * 100;
 
-  // Função que chamará a Server Action
   const handleGift = async () => {
     startTransition(async () => {
       toast.info("Processando seu presente...");
-
-      // (MUDANÇA): Chamar a Server Action real
       const result = await giftProduct(product.id);
-
       if (result.success) {
         toast.success(result.message);
       } else {
@@ -55,54 +50,82 @@ export function ProductCard({ product }: ProductCardProps) {
   };
 
   return (
-    <Card className="flex flex-col">
-      <CardHeader>
-        <div className="relative h-48 w-full overflow-hidden rounded-md">
-          <Image
-            src={`/api/images/${product.imageUrl}`}
-            alt={product.name}
-            fill
-            className="object-cover"
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          />
-          {isSoldOut && (
-            <Badge
-              variant="destructive"
-              className="absolute right-2 top-2"
-            >
-              Esgotado!
-            </Badge>
-          )}
-        </div>
-      </CardHeader>
-      <CardContent className="flex-1 space-y-3">
-        <CardTitle>{product.name}</CardTitle>
-        <CardDescription>
-          {product.description ||
-            "O administrador não adicionou uma descrição."}
-        </CardDescription>
-      </CardContent>
-      <CardFooter className="flex flex-col items-start gap-4">
-        <div className="w-full space-y-1">
-          <p className="text-sm font-medium text-muted-foreground">
-            Recebido: {product.currentQuantity} de{" "}
-            {product.desiredQuantity}
-          </p>
-          <Progress value={progressPercentage} />
-        </div>
+    // O Card principal agora é um 'motion.div'
+    <motion.div
+      variants={variants} // Para a animação da grade
+      whileHover={{ y: -5, scale: 1.02 }} // Animação de hover
+      transition={{ type: "spring", stiffness: 300 }}
+      // --- Estilo Glassmorphism ---
+      className="flex flex-col overflow-hidden rounded-xl border
+                 border-white/10 bg-black/30 backdrop-blur-lg shadow-xl"
+    >
+      {/* 1. Imagem */}
+      <div className="relative h-56 w-full">
+        <Image
+          src={`/api/images/${product.imageUrl}`}
+          alt={product.name}
+          fill
+          className="object-cover"
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+        />
+        {isSoldOut && (
+          <Badge
+            variant="destructive"
+            className="absolute right-3 top-3"
+          >
+            Esgotado!
+          </Badge>
+        )}
+      </div>
 
+      {/* 2. Conteúdo (Nome, Descrição, Progresso) */}
+      <div className="flex flex-1 flex-col p-5 text-white">
+        <h3 className="text-xl font-bold">{product.name}</h3>
+        <p className="mt-1 flex-1 text-sm text-gray-300">
+          {product.description ||
+            "Um presente especial para nossa casa nova."}
+        </p>
+
+        {/* Progresso */}
+        <div className="mt-4 w-full space-y-2">
+          <div className="flex justify-between text-sm font-medium text-gray-200">
+            <span>Recebido:</span>
+            <span>
+              {product.currentQuantity} / {product.desiredQuantity}
+            </span>
+          </div>
+          <Progress value={progressPercentage} className="h-2" />
+        </div>
+      </div>
+
+      {/* 3. Footer com Botão */}
+      <div className="p-5 pt-0">
         <Button
           onClick={handleGift}
           disabled={isSoldOut || isPending}
-          className="w-full"
+          className="w-full font-bold"
+          variant={isSoldOut ? "secondary" : "default"}
+          size="lg"
         >
-          {isSoldOut
-            ? "Presente Esgotado"
-            : isPending
-            ? "Processando..."
-            : "Presentear com 1 unidade"}
+          {isSoldOut ? (
+            <>
+              <Check className="mr-2 h-4 w-4" />
+              Obrigado!
+            </>
+          ) : (
+            // Animação no ícone do botão
+            <motion.div
+              className="flex items-center"
+              whileHover={{ scale: 1.1 }}
+            >
+              <Gift className="mr-2 h-4 w-4" />
+              {isPending
+                ? "Processando..."
+                : "Presentear com 1 unidade"}
+            </motion.div>
+          )}
         </Button>
-      </CardFooter>
-    </Card>
+      </div>
+    </motion.div>
   );
 }
