@@ -2,13 +2,28 @@
 import prisma from "@/lib/prisma";
 import { ProductForm } from "./components/product-form";
 import { ProductList } from "./components/product-list";
-import { Button } from "@/components/ui/button"; // Importar Button
+import { Button } from "@/components/ui/button";
+
+// Forçar dinâmico aqui também para garantir dados frescos no admin
+export const dynamic = "force-dynamic";
 
 async function getProducts() {
   try {
     const products = await prisma.product.findMany({
       orderBy: {
         createdAt: "desc",
+      },
+      // INCLUIR QUEM PRESENTEOU
+      include: {
+        gifts: {
+          include: {
+            user: {
+              select: {
+                email: true,
+              },
+            },
+          },
+        },
       },
     });
     return products;
@@ -24,13 +39,10 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">
+        {/* Adicionado text-white */}
+        <h1 className="text-3xl font-bold text-white">
           Meus Produtos
         </h1>
-        {/* --- MUDANÇA AQUI ---
-          Passamos o botão "Adicionar" como a 'trigger'
-          para o ProductForm em modo de 'criação'.
-        */}
         <ProductForm
           trigger={
             <Button>Adicionar Novo Produto</Button>

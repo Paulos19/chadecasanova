@@ -94,7 +94,11 @@ export function ProductCard({
               {product.currentQuantity} / {product.desiredQuantity}
             </span>
           </div>
-          <Progress value={progressPercentage} className="h-2" />
+          {/* ATUALIZAÇÃO: Barra de progresso com fundo (trilho) e indicador brancos */}
+          <Progress
+            value={progressPercentage}
+            className="h-2 bg-white/20 [&>div]:bg-white"
+          />
         </div>
       </div>
 

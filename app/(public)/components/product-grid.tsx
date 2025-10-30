@@ -41,7 +41,8 @@ export function ProductGrid({ products }: ProductGridProps) {
   if (products.length === 0) {
     return (
       <p className="text-center text-lg text-gray-300">
-        A lista de presentes ainda não foi adicionada pelo administrador.
+        {/* ATUALIZAÇÃO DA MENSAGEM */}
+        Nenhum presente encontrado. Tente uma busca diferente.
       </p>
     );
   }

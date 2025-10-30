@@ -2,7 +2,7 @@
 "use client";
 
 import { ChangeEvent, useState, useTransition } from "react";
-import { useForm } from "react-hook-form";
+import { Resolver, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { productSchema } from "@/lib/schemas";
@@ -52,7 +52,7 @@ export function ProductForm({
   const isEditMode = !!productToEdit;
 
   const form = useForm<z.infer<typeof productSchema>>({
-    resolver: zodResolver(productSchema),
+    resolver: zodResolver(productSchema) as Resolver<z.infer<typeof productSchema>>,
     // Define os valores padrão (se for edição, usa o produto, senão, vazio)
     defaultValues: isEditMode
       ? {
