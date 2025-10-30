@@ -1,31 +1,28 @@
 // app/(public)/page.tsx
 import prisma from "@/lib/prisma";
 import { ProductGrid } from "./components/product-grid";
-// 1. Importar o novo componente de busca
 import { SearchInput } from "./components/search-input";
-// 2. Importar tipos do Prisma para a cláusula 'where'
 import { Prisma } from "@prisma/client";
+// 1. Importar authOptions e getServerSession
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
-// Manter a página dinâmica para revalidação
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-// 3. Atualizar getProducts para aceitar a query de busca
 async function getProducts(searchQuery: string | undefined) {
-  
-  // 4. Criar a cláusula 'where' dinâmica
   const where: Prisma.ProductWhereInput = {};
 
   if (searchQuery) {
     where.name = {
-      contains: searchQuery, // Filtra pelo nome
-      mode: "insensitive",  // Ignora maiúsculas/minúsculas
+      contains: searchQuery,
+      mode: "insensitive",
     };
   }
 
   try {
     const products = await prisma.product.findMany({
-      where: where, // 5. Aplicar o filtro na query
+      where: where,
       select: {
         id: true,
         name: true,
@@ -45,7 +42,6 @@ async function getProducts(searchQuery: string | undefined) {
   }
 }
 
-// 6. Receber searchParams na props da página
 export default async function HomePage({
   searchParams,
 }: {
@@ -53,11 +49,28 @@ export default async function HomePage({
     search?: string;
   };
 }) {
-  // 7. Obter a query da URL
   const searchQuery = searchParams?.search;
-  
-  // 8. Passar a query para a função de busca
   const products = await getProducts(searchQuery);
+
+  // 2. Buscar a sessão e os presentes do usuário logado
+  const session = await getServerSession(authOptions);
+  const userId = session?.user?.id;
+
+  let giftedProductIds = new Set<string>();
+
+  if (userId) {
+    const userGifts = await prisma.gift.findMany({
+      where: { userId: userId },
+      select: { productId: true },
+    });
+    giftedProductIds = new Set(userGifts.map((gift) => gift.productId));
+  }
+
+  // 3. Mapear os produtos para incluir o status 'userHasGifted'
+  const productsWithGiftStatus = products.map((product) => ({
+    ...product,
+    userHasGifted: giftedProductIds.has(product.id),
+  }));
 
   return (
     <div className="isolate container mx-auto max-w-7xl p-8">
@@ -70,11 +83,10 @@ export default async function HomePage({
         </p>
       </header>
 
-      {/* 9. Adicionar o componente de busca à página */}
       <SearchInput />
 
-      {/* ProductGrid agora receberá a lista filtrada (ou completa se não houver busca) */}
-      <ProductGrid products={products} />
+      {/* 4. Passar a lista de produtos atualizada para o grid */}
+      <ProductGrid products={productsWithGiftStatus} />
     </div>
   );
 }

@@ -91,3 +91,72 @@ export async function giftProduct(
     };
   }
 }
+
+export async function cancelGift(
+  productId: string
+): Promise<FormState> {
+  // 1. Verificar a sessão do usuário
+  const session = await getServerSession(authOptions);
+
+  if (!session?.user?.id) {
+    return {
+      success: false,
+      message: "Você precisa estar logado.",
+    };
+  }
+
+  const userId = session.user.id;
+
+  try {
+    // 2. Usar transação
+    await prisma.$transaction(async (tx) => {
+      // 3. Encontrar o presente (Gift) específico deste usuário
+      const gift = await tx.gift.findFirst({
+        where: {
+          productId: productId,
+          userId: userId,
+        },
+      });
+
+      if (!gift) {
+        throw new Error(
+          "Presente não encontrado. Você não pode cancelar este item."
+        );
+      }
+
+      // 4. Deletar o registro do presente
+      await tx.gift.delete({
+        where: { id: gift.id },
+      });
+
+      // 5. Decrementar a quantidade do produto
+      await tx.product.update({
+        where: { id: productId },
+        data: {
+          currentQuantity: {
+            decrement: 1, // Remove 1 da quantidade atual
+          },
+        },
+      });
+    });
+
+    // 6. Revalidar o cache
+    revalidatePath("/");
+    revalidatePath("/dashboard");
+
+    return {
+      success: true,
+      message: "Presente cancelado com sucesso.",
+    };
+  } catch (error) {
+    console.error("[CANCEL_GIFT_ACTION_ERROR]", error);
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Erro ao cancelar o presente.";
+    return {
+      success: false,
+      message: message,
+    };
+  }
+}

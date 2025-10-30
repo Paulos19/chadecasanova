@@ -6,6 +6,7 @@ import { Product } from "@prisma/client";
 import { ProductCard } from "./product-card";
 
 // (O tipo dos dados do produto)
+// Adicionado 'userHasGifted' para saber se o usuário logado presenteou este item
 type ProductData = Pick<
   Product,
   | "id"
@@ -14,7 +15,9 @@ type ProductData = Pick<
   | "imageUrl"
   | "desiredQuantity"
   | "currentQuantity"
->;
+> & {
+  userHasGifted: boolean;
+};
 
 type ProductGridProps = {
   products: ProductData[];
@@ -41,7 +44,7 @@ export function ProductGrid({ products }: ProductGridProps) {
   if (products.length === 0) {
     return (
       <p className="text-center text-lg text-gray-300">
-        {/* ATUALIZAÇÃO DA MENSAGEM */}
+        {/* Mensagem atualizada para refletir a busca */}
         Nenhum presente encontrado. Tente uma busca diferente.
       </p>
     );
